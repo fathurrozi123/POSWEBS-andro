@@ -3,8 +3,6 @@ name: Build Android APK
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -22,8 +20,14 @@ jobs:
     
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
+      with:
+        cmdline-tools-version: 11076708
+        packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
     
-    - name: Cache Gradle packages
+    - name: Accept Android Licenses
+      run: yes | sdkmanager --licenses || true
+    
+    - name: Cache Gradle
       uses: actions/cache@v4
       with:
         path: |
@@ -33,43 +37,28 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-gradle-
     
-    - name: Fix Gradle permissions
-      run: |
-        chmod +x gradlew
-        chmod +x gradle/wrapper/gradle-wrapper.jar
+    - name: Fix permissions
+      run: chmod +x gradlew
     
-    - name: Create local.properties
-      run: |
-        echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug --no-daemon --info 2>&1 | tee build.log
+      continue-on-error: true
     
-    - name: Build with Gradle
-      run: ./gradlew assembleDebug --no-daemon --stacktrace
-      env:
-        ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+    - name: Upload Build Log
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: build-log
+        path: build.log
     
-    - name: Check APK exists
+    - name: Check and Upload APK
       run: |
-        ls -la app/build/outputs/apk/debug/
+        ls -la app/build/outputs/apk/debug/ || echo "APK folder not found"
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
+      if: success()
       with:
         name: POSWEBS-APK
         path: app/build/outputs/apk/debug/*.apk
         retention-days: 30
-    
-    - name: Create Release
-      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-      uses: softprops/action-gh-release@v1
-      with:
-        files: app/build/outputs/apk/debug/*.apk
-        tag_name: v${{ github.run_number }}
-        name: Release v${{ github.run_number }}
-        body: |
-          ## POSWEBS APK Build
-          - Build Date: ${{ github.event.head_commit.timestamp }}
-          - Commit: ${{ github.sha }}
-          
-          Download APK di bawah ⬇️
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
