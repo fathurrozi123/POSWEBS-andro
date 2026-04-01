@@ -96,6 +96,9 @@ lint/tmp/
 !capacitor-cordova-android-plugins/cordova.variables.gradle
 !capacitor-cordova-android-plugins/build.gradle
 
+# Capacitor Android library
+!capacitor-android-lib/
+
 # Copied web assets
 app/src/main/assets/public
 
