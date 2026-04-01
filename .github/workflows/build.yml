@@ -41,24 +41,20 @@ jobs:
       run: chmod +x gradlew
     
     - name: Build Debug APK
-      run: ./gradlew assembleDebug --no-daemon --info 2>&1 | tee build.log
-      continue-on-error: true
+      run: ./gradlew assembleDebug --no-daemon
     
-    - name: Upload Build Log
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: build-log
-        path: build.log
-    
-    - name: Check and Upload APK
+    - name: List APK files
       run: |
-        ls -la app/build/outputs/apk/debug/ || echo "APK folder not found"
+        echo "Looking for APK files..."
+        find . -name "*.apk" -type f
+        ls -la app/build/outputs/apk/debug/ || echo "Debug folder not found"
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
-      if: success()
       with:
         name: POSWEBS-APK
-        path: app/build/outputs/apk/debug/*.apk
+        path: |
+          app/build/outputs/apk/**/*.apk
+          **/*.apk
+        if-no-files-found: warn
         retention-days: 30
